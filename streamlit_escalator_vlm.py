@@ -84,22 +84,36 @@ st.markdown("""
 
 def load_escalator_vlm_analyzer():
     """Load VLM-enhanced escalator analyzer"""
-    # Get Hugging Face token
+    # Get Hugging Face token - PRIORITY ORDER for security:
     hf_token = None
     
-    # Try to get from session state first
-    hf_token = st.session_state.get("hf_token", None)
+    # 1. FIRST: Try Streamlit secrets (for production deployment)
+    try:
+        hf_token = st.secrets.get("HF_TOKEN", None)
+        if hf_token:
+            st.success("🔐 Token loaded from Streamlit secrets (production)")
+    except Exception:
+        pass
     
-    # Try to get from environment variable
+    # 2. SECOND: Try session state (for user input)
+    if not hf_token:
+        hf_token = st.session_state.get("hf_token", None)
+        if hf_token:
+            st.info("🔑 Token loaded from session state")
+    
+    # 3. THIRD: Try environment variable (for local development)
     if not hf_token:
         import os
         hf_token = os.getenv("HF_TOKEN", None)
+        if hf_token:
+            st.info("🔑 Token loaded from environment variable")
     
-    # Try to get from token file
+    # 4. LAST: Try token file (for local development only)
     if not hf_token:
         try:
             with open("hf_token.txt", "r") as f:
                 hf_token = f.read().strip()
+                st.warning("⚠️ Token loaded from file (not recommended for production)")
         except FileNotFoundError:
             pass
     
@@ -108,6 +122,9 @@ def load_escalator_vlm_analyzer():
         st.info(f"🔑 Token found: {hf_token[:10]}...")
     else:
         st.warning("🔑 No Hugging Face token found - VLM will not work")
+        st.info("💡 To add your token securely:")
+        st.info("   • For Streamlit Cloud: Add to app secrets")
+        st.info("   • For local: Set HF_TOKEN environment variable")
     
     return EscalatorVLMAnalyzer(hf_token=hf_token)
 
