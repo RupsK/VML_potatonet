@@ -1,0 +1,32 @@
+[Unit]
+Description=Thermal Image AI Analyzer
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/thermal-analyzer
+Environment=PATH=/opt/thermal-analyzer/venv/bin
+Environment=HF_TOKEN=your_huggingface_token_here
+Environment=STREAMLIT_SERVER_HEADLESS=true
+Environment=STREAMLIT_SERVER_ENABLE_CORS=false
+Environment=STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=true
+ExecStart=/opt/thermal-analyzer/venv/bin/streamlit run streamlit_app.py --server.port=8501 --server.address=0.0.0.0
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=thermal-analyzer
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/thermal-analyzer/model_cache /opt/thermal-analyzer/test_image /opt/thermal-analyzer/test_video
+
+[Install]
+WantedBy=multi-user.target 

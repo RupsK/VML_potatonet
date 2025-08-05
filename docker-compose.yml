@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  thermal-analyzer:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./model_cache:/app/model_cache
+      - ./test_image:/app/test_image
+      - ./test_video:/app/test_video
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_SERVER_ENABLE_CORS=false
+      - STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=true
+    restart: unless-stopped
+    container_name: thermal-analyzer
+    networks:
+      - app-network
+
+  escalator-safety:
+    build: .
+    ports:
+      - "8502:8501"
+    volumes:
+      - ./model_cache:/app/model_cache
+      - ./test_video:/app/test_video
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_SERVER_ENABLE_CORS=false
+      - STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=true
+    command: ["streamlit", "run", "streamlit_escalator_vlm.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    restart: unless-stopped
+    container_name: escalator-safety
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - thermal-analyzer
+      - escalator-safety
+    restart: unless-stopped
+    container_name: nginx-proxy
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge 
